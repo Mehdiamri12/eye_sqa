@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Eye Diagram Analyzer</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+         background:#0f0f0f;color:#e0e0e0;padding:2rem}
+    h1{font-size:1.3rem;font-weight:500;color:#fff;margin-bottom:.25rem}
+    .sub{font-size:.8rem;color:#555;margin-bottom:1.5rem}
+    .card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;
+          padding:1.25rem;margin-bottom:1rem;max-width:660px}
+    .card h2{font-size:.8rem;color:#666;text-transform:uppercase;
+             letter-spacing:.05em;margin-bottom:1rem}
+    label{display:block;font-size:.82rem;color:#888;margin-bottom:.3rem}
+    input,select,textarea{width:100%;padding:7px 11px;background:#111;
+      border:1px solid #2a2a2a;border-radius:5px;color:#e0e0e0;
+      font-size:.85rem;margin-bottom:.9rem;font-family:inherit}
+    textarea{height:80px;resize:vertical;font-family:monospace;font-size:.75rem}
+    input[type=file]{padding:5px;cursor:pointer}
+    .btn{padding:8px 18px;background:#2563eb;color:#fff;border:none;
+         border-radius:5px;font-size:.85rem;cursor:pointer}
+    .btn:hover{background:#1d4ed8}
+    .divider{text-align:center;color:#333;font-size:.75rem;margin:.75rem 0;
+             position:relative}
+    .divider::before,.divider::after{content:'';position:absolute;top:50%;
+      width:44%;height:1px;background:#222}
+    .divider::before{left:0}.divider::after{right:0}
+
+    /* Results */
+    #result-section{display:none;max-width:660px}
+    .r-card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;
+            padding:1.25rem;margin-bottom:.75rem}
+    .r-card h3{font-size:.78rem;color:#555;text-transform:uppercase;
+               letter-spacing:.05em;margin-bottom:.9rem}
+    .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .metric{background:#111;border-radius:5px;padding:10px 14px;border:1px solid #222}
+    .m-label{font-size:.72rem;color:#555;margin-bottom:3px}
+    .m-value{font-size:1.3rem;font-weight:500;color:#fff}
+    .m-unit{font-size:.7rem;color:#555;margin-left:2px}
+    .m-delta{font-size:.75rem;margin-top:2px}
+    .pos{color:#22c55e}.neg{color:#ef4444}
+
+    /* Stage bars */
+    .stage-row{display:flex;align-items:center;gap:8px;padding:8px 0;
+               border-bottom:1px solid #1f1f1f}
+    .stage-row:last-child{border-bottom:none}
+    .s-name{font-size:.78rem;color:#777;min-width:90px}
+    .s-wrap{flex:1;background:#111;border-radius:3px;height:9px}
+    .s-bar{height:9px;border-radius:3px;background:#2563eb;transition:width .4s}
+    .s-val{font-size:.8rem;color:#ccc;min-width:65px;text-align:right}
+
+    /* Sweep grid */
+    .sweep-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:8px}
+    .sweep-cell{background:#111;border:1px solid #222;border-radius:4px;
+                padding:5px 3px;text-align:center;font-size:.72rem}
+    .sweep-cell.best   {border-color:#22c55e;background:#0f2a0f}
+    .sweep-cell.warning{border-color:#f59e0b;background:#2a1a0f}
+    .sweep-cell.danger {border-color:#ef4444;background:#2a0f0f}
+    .sweep-cell .db{color:#555;font-size:.68rem}
+    .sweep-cell .mv{color:#ccc;font-weight:500}
+    .sweep-cell.best    .mv{color:#22c55e}
+    .sweep-cell.warning .mv{color:#f59e0b}
+    .sweep-cell.danger  .mv{color:#ef4444}
+    .sweep-legend{display:flex;gap:14px;margin-top:7px;font-size:.72rem;color:#555}
+    .sweep-legend span{display:flex;align-items:center;gap:4px}
+    .leg{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+    /* Error */
+    #error-section{display:none;max-width:660px;margin-bottom:.75rem}
+    .err-card{background:#2a0f0f;border:1px solid #5a1a1a;border-radius:8px;padding:1rem 1.25rem}
+    .err-title{font-size:.82rem;color:#f87171;font-weight:500;margin-bottom:5px}
+    #error-text{font-size:.82rem;color:#fca5a5;line-height:1.5}
+
+    .spinner{display:none;font-size:.82rem;color:#555;margin-top:6px}
+    .result-id{font-size:.7rem;color:#333;margin-top:10px;font-family:monospace}
+  </style>
+</head>
+<body>
+  <h1>Eye Diagram Analyzer</h1>
+  <p class="sub">Full CTLE + DFE pipeline · upload SPICE file or paste samples</p>
+
+  <div class="card">
+    <h2>Upload SPICE file (.txt)</h2>
+    <input type="file" id="spice-file" accept=".txt">
+    <button class="btn" onclick="analyzeFile()">Analyze File</button>
+    <div class="spinner" id="sp-file">Running pipeline...</div>
+  </div>
+
+  <div class="divider">or</div>
+
+  <div class="card">
+    <h2>Paste signal samples</h2>
+    <label>Modulation</label>
+    <select id="modulation">
+      <option value="NRZ">NRZ</option>
+      <option value="PAM3" selected>PAM3</option>
+      <option value="PAM4">PAM4</option>
+    </select>
+    <label>Unit Interval (ps)</label>
+    <input type="number" id="ui-ps" value="80" min="1">
+    <label>Voltage samples (comma or newline separated)</label>
+    <textarea id="samples-input" placeholder="0.559, 1.247, 0.903, 0.559 ..."></textarea>
+    <button class="btn" onclick="analyzeJSON()">Analyze Samples</button>
+    <div class="spinner" id="sp-json">Running pipeline...</div>
+  </div>
+
+  <div id="error-section">
+    <div class="err-card">
+      <div class="err-title" id="error-title">Analysis failed</div>
+      <div id="error-text"></div>
+    </div>
+  </div>
+
+  <div id="result-section">
+    <div class="r-card">
+      <h3>Summary</h3>
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="m-label">Baseline Eye Height</div>
+          <div><span class="m-value" id="m-base-eh">—</span><span class="m-unit">mV</span></div>
+        </div>
+        <div class="metric">
+          <div class="m-label">After CTLE + DFE</div>
+          <div><span class="m-value" id="m-dfe-eh">—</span><span class="m-unit">mV</span></div>
+          <div class="m-delta" id="m-delta">—</div>
+        </div>
+        <div class="metric">
+          <div class="m-label">Optimal CTLE Boost</div>
+          <div><span class="m-value" id="m-boost">—</span><span class="m-unit">dB</span></div>
+        </div>
+        <div class="metric">
+          <div class="m-label">DFE Decisions</div>
+          <div><span class="m-value" id="m-decs">—</span><span class="m-unit">symbols</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="r-card">
+      <h3>Pipeline stages</h3>
+      <div id="stage-bars"></div>
+    </div>
+
+    <div class="r-card">
+      <h3>CTLE sweep</h3>
+      <div class="sweep-grid" id="sweep-grid"></div>
+      <div class="sweep-legend">
+        <span><div class="leg" style="background:#22c55e"></div>optimal</span>
+        <span><div class="leg" style="background:#f59e0b"></div>&lt;50% of peak</span>
+        <span><div class="leg" style="background:#ef4444"></div>over-equalized (&lt;20%)</span>
+      </div>
+    </div>
+
+    <div class="result-id" id="result-id"></div>
+  </div>
+
+  <script>
+    function showError(msg, title='Analysis failed') {
+      document.getElementById('error-section').style.display = 'block';
+      document.getElementById('result-section').style.display = 'none';
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-text').textContent  = msg;
+    }
+
+    function renderResult(d) {
+      document.getElementById('error-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'block';
+
+      const baseEH = d.baseline.eye_height_mv;
+      const dfeEH  = d.dfe.eye_height_mv;
+      const delta  = dfeEH - baseEH;
+
+      document.getElementById('m-base-eh').textContent = baseEH.toFixed(1);
+      document.getElementById('m-dfe-eh').textContent  = dfeEH.toFixed(1);
+      document.getElementById('m-boost').textContent   = d.ctle.optimal_boost_db;
+      document.getElementById('m-decs').textContent    = d.dfe.n_decisions;
+
+      const dEl = document.getElementById('m-delta');
+      dEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1) + ' mV vs baseline';
+      dEl.className   = 'm-delta ' + (delta >= 0 ? 'pos' : 'neg');
+
+      // Stage bars
+      const maxEH = Math.max(baseEH, d.ctle.eye_height_mv, dfeEH, 1);
+      document.getElementById('stage-bars').innerHTML = [
+        {name:'Baseline',          val:baseEH},
+        {name:`CTLE ${d.ctle.optimal_boost_db}dB`, val:d.ctle.eye_height_mv},
+        {name:'CTLE+DFE',          val:dfeEH},
+      ].map(s => `
+        <div class="stage-row">
+          <div class="s-name">${s.name}</div>
+          <div class="s-wrap"><div class="s-bar" style="width:${Math.min(100,s.val/maxEH*100).toFixed(1)}%"></div></div>
+          <div class="s-val">${s.val.toFixed(1)} mV</div>
+        </div>`).join('');
+
+      // Sweep grid with danger zones
+      const sweep  = d.ctle.sweep;
+      const optDb  = String(d.ctle.optimal_boost_db);
+      const peakMV = Math.max(...Object.values(sweep));
+      document.getElementById('sweep-grid').innerHTML = Object.entries(sweep).map(([db, mv]) => {
+        const ratio = peakMV > 0 ? mv / peakMV : 0;
+        const cls   = db === optDb ? 'best' : ratio < 0.20 ? 'danger' : ratio < 0.50 ? 'warning' : '';
+        return `<div class="sweep-cell ${cls}" data-db="${db}">
+          <div class="db">${db}dB</div>
+          <div class="mv">${mv.toFixed(0)}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('result-id').textContent = 'id: ' + d.id;
+    }
+
+    async function analyzeJSON() {
+      const raw = document.getElementById('samples-input').value.trim();
+      if (!raw) { showError('No samples provided'); return; }
+      const samples = raw.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+      if (samples.length < 100) { showError(`Need ≥100 samples, got ${samples.length}`); return; }
+      const ui_ps      = parseFloat(document.getElementById('ui-ps').value);
+      const modulation = document.getElementById('modulation').value;
+      document.getElementById('sp-json').style.display = 'block';
+      try {
+        const r = await fetch('/analyze/json', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({samples, ui_ps, modulation})
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Unknown error');
+        renderResult(d);
+      } catch(e) { showError(e.message); }
+      finally { document.getElementById('sp-json').style.display = 'none'; }
+    }
+
+    async function analyzeFile() {
+      const fi = document.getElementById('spice-file');
+      if (!fi.files.length) { showError('No file selected'); return; }
+      const fd = new FormData();
+      fd.append('file', fi.files[0]);
+      document.getElementById('sp-file').style.display = 'block';
+      try {
+        const r = await fetch('/analyze/file', {method:'POST', body:fd});
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Unknown error');
+        renderResult(d);
+      } catch(e) { showError(e.message); }
+      finally { document.getElementById('sp-file').style.display = 'none'; }
+    }
+  </script>
+</body>
+</html>

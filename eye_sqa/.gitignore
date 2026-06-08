@@ -1,0 +1,14 @@
+# Python environment and cache
+__pycache__/
+.pytest_cache/
+*.pyc
+venv/
+env/
+
+# Playwright and Test Artifacts
+test-results/
+playwright-report/
+
+# Large Data files (Optional, if you have giant SPICE files you don't want to upload)
+Data/*.tr0
+Data/*_massive.txt
