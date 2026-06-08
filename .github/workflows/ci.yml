@@ -32,7 +32,7 @@ jobs:
       run: pytest tests/test_pipeline.py tests/test_api.py -v
 
     - name: Run Playwright Frontend Tests
-      run: pytest tests/test_e2e.py -v --tracing=retain-on-failure
+      run: pytest tests/test_e2e.py -v --screenshot=only-on-failure --tracing=retain-on-failure
 
     - name: Upload Playwright Traces
       if: failure()

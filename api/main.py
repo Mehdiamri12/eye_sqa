@@ -34,6 +34,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, field_validator
+from fastapi.staticfiles import StaticFiles
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -44,8 +45,17 @@ from pipeline import (
 
 app = FastAPI(title="Eye Diagram Analysis API", version="1.0.0")
 
+
 BOOST_SWEEP    = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
 STORE: dict    = {}
+# 1. Get the absolute path to the root 'eye_sqa' directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 2. Point to the frontend folder
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# 3. Tell FastAPI to serve the index.html file whenever someone goes to "/"
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 
 # ── Request model ─────────────────────────────────────────────────────────────
