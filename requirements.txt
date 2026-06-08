@@ -6,3 +6,6 @@ python-multipart
 pytest
 pytest-playwright
 playwright
+scipy
+matplotlib
+pandas
