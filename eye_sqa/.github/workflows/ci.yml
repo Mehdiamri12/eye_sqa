@@ -1,0 +1,53 @@
+name: Eye Diagram CI Pipeline
+
+# Trigger the pipeline on pushes or pull requests to the main branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    # Use a blank, fresh Ubuntu machine
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Pull your code into the virtual machine
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # Step 2: Set up the correct Python environment
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip' # Speeds up future runs
+
+    # Step 3: Install all project dependencies
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    # Step 4: Install the Chromium browser for Playwright E2E tests
+    - name: Install Playwright Browsers
+      run: playwright install chromium --with-deps
+
+    # Step 5: The Fast Feedback Loop (Core Math & API)
+    - name: Run Backend & API Tests
+      run: pytest tests/test_pipeline.py tests/test_api.py -v
+
+    # Step 6: The E2E Heavy Lifter (UI)
+    # The --tracing flag ensures a snapshot is saved if the UI breaks
+    - name: Run Playwright Frontend Tests
+      run: pytest tests/test_e2e.py -v --tracing=retain-on-failure
+
+    # Step 7: Save visual evidence if the tests fail
+    - name: Upload Playwright Traces
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-failure-traces
+        path: test-results/
+        retention-days: 7
