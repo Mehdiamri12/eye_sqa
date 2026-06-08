@@ -44,7 +44,7 @@ def browser_session(api_server):
     """Single Chromium instance for the full E2E session."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=500)
+        browser = p.chromium.launch(headless=True)
         print("[conftest] Browser launched")
         yield browser
         browser.close()
