@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from parser import parse_spice_txt
 from interpolate import interpolate_waveform
 from pipeline import get_pam_config, apply_ctle, run_fold_and_measure
-from tests.conftest import SIGNALS
+from tests.conftest import SIGNALS, SPICE_AVAILABLE
 
 BOOST_SWEEP = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
 
@@ -46,6 +46,12 @@ def run_sweep(t, v, ui, path):
     return results
 
 
+skip_no_data = pytest.mark.skipif(
+    not SPICE_AVAILABLE,
+    reason="SPICE data files not found in Data/ — copy your Data/ folder to run these tests"
+)
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # TestParserRobustness
 #
@@ -54,6 +60,7 @@ def run_sweep(t, v, ui, path):
 # corrupts every downstream measurement without any visible error.
 # ════════════════════════════════════════════════════════════════════════════
 
+@skip_no_data
 class TestParserRobustness:
     """
     Tests the parser on real SPICE files (tab-separated, scientific notation)
@@ -175,6 +182,7 @@ class TestParserRobustness:
 # signal margin — a silent failure with real hardware consequences.
 # ════════════════════════════════════════════════════════════════════════════
 
+@skip_no_data
 class TestCTLESweep:
     """
     Tests the CTLE sweep on both channels with very different equalization profiles:

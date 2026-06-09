@@ -41,11 +41,21 @@ def api_server():
 
 @pytest.fixture(scope="session")
 def browser_session(api_server):
-    """Single Chromium instance for the full E2E session."""
+    """
+    Single Chromium instance for the full E2E session.
+    Headless in CI (GITHUB_ACTIONS env var set), headed locally.
+    """
+    import os
     from playwright.sync_api import sync_playwright
+
+    is_ci    = os.environ.get("GITHUB_ACTIONS") == "true"
+    headless = is_ci          # True on CI, False locally
+    slow_mo  = 0 if is_ci else 500
+
+    print(f"[conftest] Browser: headless={headless} slow_mo={slow_mo}ms")
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        print("[conftest] Browser launched")
+        browser = p.chromium.launch(headless=headless, slow_mo=slow_mo)
         yield browser
         browser.close()
         print("[conftest] Browser closed")
@@ -55,11 +65,14 @@ def browser_session(api_server):
 def page(browser_session):
     """
     Fresh browser context + page for each test.
-    Stays open (page.pause()) after the test so you can interact
-    with the result. Press Resume in the Playwright Inspector to continue.
+    Locally: stays open (page.pause()) so you can interact with the result.
+             Press Resume in the Playwright Inspector to continue.
+    CI:      closes immediately after test completes.
     """
+    import os
     ctx  = browser_session.new_context(viewport={"width": 1100, "height": 800})
     page = ctx.new_page()
     yield page
-    page.pause()   # keeps browser open — press Resume to move to next test
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        page.pause()   # local only — press Resume to move to next test
     ctx.close()

@@ -24,7 +24,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient
 from api.main import app
-from tests.conftest import SIGNALS
+from tests.conftest import SIGNALS, SPICE_AVAILABLE
+
+skip_no_data = pytest.mark.skipif(
+    not SPICE_AVAILABLE,
+    reason="SPICE data files not found in Data/"
+)
 
 import numpy as np
 
@@ -53,6 +58,7 @@ NRZ = nrz_payload()
 # Golden master tests grounded in real SPICE measurements.
 # ════════════════════════════════════════════════════════════════════════════
 
+@skip_no_data
 class TestCTLEViaAPI:
     """
     Tests that the API correctly reports CTLE sweep results.

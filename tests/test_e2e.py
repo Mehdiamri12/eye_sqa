@@ -50,6 +50,7 @@ class TestFrontendFlow:
     3. Real PAM3 file upload → full result with sweep, stage bars, metrics
     """
 
+    @pytest.mark.skipif(not os.path.exists(PAM3_FILE), reason="PAM3 SPICE file not available")
     def test_pam3_cliff_shown_in_red(self, page):
         """
         Upload the real PAM3 80ui SPICE file and verify that the
@@ -135,6 +136,7 @@ class TestFrontendFlow:
         print(f"[e2e] Error message: '{error_text}'")
         assert len(error_text) > 0, "Error text is empty — no message shown to engineer."
 
+    @pytest.mark.skipif(not os.path.exists(PAM3_FILE), reason="PAM3 SPICE file not available")
     def test_pam3_file_upload_full_flow(self, page):
         """
         Full end-to-end: upload PAM3 SPICE file → verify metrics render,

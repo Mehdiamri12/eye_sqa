@@ -17,6 +17,22 @@ from pipeline import get_pam_config, run_fold_and_measure
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Data")
 
+# Skip the entire pipeline + API test session if SPICE files are not present.
+# This allows CI to run E2E tests independently without needing proprietary data.
+SPICE_AVAILABLE = (
+    os.path.exists(os.path.join(DATA, "PAM3", "80_ui_netlist_pam3.txt")) and
+    os.path.exists(os.path.join(DATA, "PAM2", "50_ui_netlist_pam2.txt"))
+)
+
+if not SPICE_AVAILABLE:
+    import warnings
+    warnings.warn(
+        "\n[conftest] SPICE data files not found in Data/. "
+        "Pipeline and API tests will be skipped. "
+        "Copy your Data/ folder into the project to run them.",
+        UserWarning
+    )
+
 SIGNALS = {
     "pam3_80ui": {
         "path":        os.path.join(DATA, "PAM3", "80_ui_netlist_pam3.txt"),
